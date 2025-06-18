@@ -34,7 +34,11 @@ def make_busybox(tmpdir, runcmd, loadmods):
     bin = os.path.join(tmpdir, "bin")
     os.makedirs(bin, exist_ok=True)
 
-    busyboxbin = which("busybox")
+    try:
+        busyboxbin = which("busybox")
+    except Exception as e:
+        raise Exception("busybox is required but not found. Please install busybox: apt-get install busybox-static (or busybox)")
+    
     subprocess.check_call([busyboxbin, "--install", "-s", bin])
     shlink = os.path.join(tmpdir, "bin", "sh")
     busyboxin = os.readlink(shlink)
@@ -85,7 +89,7 @@ def get_deps(binary):
             if m is not None:
                 deps.append(m.group(1))
             else:
-                m = re.match("\s*(/[^ ]+)\s+\(.*\)\s*$", line)
+                m = re.match(r"\s*(/[^ ]+)\s+\(.*\)\s*$", line)
                 if m is not None:
                     deps.append(m.group(1))
         return deps
@@ -173,7 +177,9 @@ def make_kmods(tmpdir, kmods, kver):
     print(kver)
     kmoddir = os.path.join("/lib", "modules", kver, "kernel")
     if not os.path.exists(kmoddir):
-        raise Exception("kmod dir '%s' does not exist" % kmoddir)
+        if len(kmods) > 0:
+            print("Warning: kmod dir '%s' does not exist, skipping kernel modules" % kmoddir)
+        return []
 
     allmods = {}
     for path in glob.glob(kmoddir + "/**/*.ko*", recursive=True):
@@ -184,7 +190,8 @@ def make_kmods(tmpdir, kmods, kver):
     loadmods = []
     for mod in kmods:
         if mod not in allmods:
-            raise Exception("kmod '%s' does not exist" % mod)
+            print("Warning: kmod '%s' does not exist, skipping" % mod)
+            continue
         loadmods.extend(copy_kmod(tmpdir, kmoddir, allmods, mod))
     return loadmods
 
