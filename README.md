@@ -3,6 +3,41 @@ Tiny linux image management tools
 Based on Daniel P. Berrangé  work
 
 make-tiny-image.py: creating tiny initrds for testing QEMU or Linux kernel/userspace behaviour
+
+## New Feature: Local Kernel Building
+
+You can now build a minimal kernel locally to include in your testing:
+
+```bash
+# Build latest stable kernel with minimal config
+./make-tiny-image.py --build-kernel
+
+# Build specific kernel version
+./make-tiny-image.py --build-kernel 6.8.1
+
+# Use custom kernel config
+./make-tiny-image.py --build-kernel --kernel-config /path/to/config
+
+# The built kernel will be saved as "tiny-kernel" and automatically used by run-tiny-image.sh
+./run-tiny-image.sh
+```
+
+### Multi-Architecture Support
+
+The tools now support multiple architectures:
+- **x86_64**: Uses bzImage format with ACPI support
+- **ARM64/aarch64**: Uses Image format with PSCI support
+- **ARM**: Uses zImage format
+
+The minimal kernel includes only essential features for initrd boot:
+- Architecture-specific CPU support
+- initrd/initramfs support
+- Essential filesystems (proc, sysfs, tmpfs)
+- Serial console for QEMU (PL011 for ARM, 8250 for x86)
+- Virtio drivers for QEMU
+- Power management (ACPI for x86, PSCI for ARM)
+
+The run script automatically detects your architecture and uses the appropriate QEMU binary and options. KVM acceleration is used when available, otherwise it falls back to TCG emulation.
 Posted: March 9th, 2023 | Filed under: Coding Tips, Fedora, libvirt, Virt Tools | Tags: debugging, initrd, make-tiny-image | No Comments »
 
 As a virtualization developer a significant amount of time is spent in understanding and debugging the behaviour and interaction of QEMU and the guest kernel/userspace code. As such my development machines have a variety of guest OS installations that get booted for various tasks. Some tasks, however, require a repeated cycle of QEMU code changes, or QEMU config changes, followed by guest testing. Waiting for an OS to boot can quickly become a significant time sink affecting productivity and lead to frustration. What is needed is a very low overhead way to accomplish simple testing tasks without an OS getting in the way.
